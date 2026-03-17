@@ -9,10 +9,11 @@
 import { Server, Origins } from 'boardgame.io/server';
 import TicTacToe from './src/tic-tac-toe/game';
 import Chess from './src/chess/game';
+import MemoryGame from './src/memory-game/game';
 
 const PORT = process.env.PORT || 8000;
 const server = Server({
-  games: [TicTacToe, Chess],
+  games: [MemoryGame, TicTacToe, Chess],
   origins: [Origins.LOCALHOST],
 });
 server.run(PORT, () => {
