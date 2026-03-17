@@ -11,12 +11,12 @@ import Multiplayer from './multiplayer';
 
 const routes = [
   {
-    path: '/',
+    path: '/memory-game',
     text: 'Singleplayer',
     component: Singleplayer,
   },
   {
-    path: '/multiplayer',
+    path: '/memory-game/multiplayer',
     text: 'Multiplayer',
     component: Multiplayer,
   },
