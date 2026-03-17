@@ -82,3 +82,78 @@ test('victory', () => {
   });
   expect(board.props.ctx.gameover).toEqual({ winner: '0' });
 });
+
+test('memory game renders with correct initial state', () => {
+  const game = Enzyme.mount(<RoutedApp route="/memory-game" />);
+  const board = game.find('MemoryBoard').instance();
+
+  expect(board.props.G.cards).toHaveLength(16);
+  expect(board.props.G.flipped).toEqual([]);
+  expect(board.props.G.scores).toEqual({});
+  expect(board.props.ctx.gameover).toEqual(undefined);
+});
+
+test('memory game flipCard flips a card', () => {
+  const game = Enzyme.mount(<RoutedApp route="/memory-game" />);
+  const board = game.find('MemoryBoard').instance();
+
+  board.props.moves.flipCard(0);
+
+  expect(board.props.G.flipped).toEqual([0]);
+});
+
+test('memory game two non-matching cards reset after turn', () => {
+  const game = Enzyme.mount(<RoutedApp route="/memory-game" />);
+  const board = game.find('MemoryBoard').instance();
+
+  // Find two cards that don't match
+  const { cards } = board.props.G;
+  let nonMatchingFirstIdx = -1;
+  let nonMatchingSecondIdx = -1;
+  for (let i = 0; i < cards.length; i++) {
+    for (let j = i + 1; j < cards.length; j++) {
+      if (cards[i].symbol !== cards[j].symbol) {
+        nonMatchingFirstIdx = i;
+        nonMatchingSecondIdx = j;
+        break;
+      }
+    }
+    if (nonMatchingFirstIdx !== -1) break;
+  }
+
+  board.props.moves.flipCard(nonMatchingFirstIdx);
+  board.props.moves.flipCard(nonMatchingSecondIdx);
+
+  // After two non-matching flips the move calls endTurn, which triggers
+  // turn.onEnd to reset flipped cards
+  expect(board.props.G.flipped).toEqual([]);
+});
+
+test('memory game two matching cards score a point', () => {
+  const game = Enzyme.mount(<RoutedApp route="/memory-game" />);
+  const board = game.find('MemoryBoard').instance();
+
+  // Find two cards that match
+  const { cards } = board.props.G;
+  let matchingFirstIdx = -1;
+  let matchingSecondIdx = -1;
+  for (let i = 0; i < cards.length; i++) {
+    for (let j = i + 1; j < cards.length; j++) {
+      if (cards[i].symbol === cards[j].symbol) {
+        matchingFirstIdx = i;
+        matchingSecondIdx = j;
+        break;
+      }
+    }
+    if (matchingFirstIdx !== -1) break;
+  }
+
+  const currentPlayer = board.props.ctx.currentPlayer;
+  board.props.moves.flipCard(matchingFirstIdx);
+  board.props.moves.flipCard(matchingSecondIdx);
+
+  expect(board.props.G.cards[matchingFirstIdx].matched).toBe(true);
+  expect(board.props.G.cards[matchingSecondIdx].matched).toBe(true);
+  expect(board.props.G.scores[currentPlayer]).toBe(1);
+  expect(board.props.G.flipped).toEqual([]);
+});

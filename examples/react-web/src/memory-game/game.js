@@ -42,12 +42,7 @@ const MemoryGame = {
   }),
 
   moves: {
-    flipCard({ G, ctx, playerID }, cardIndex) {
-      // Can't flip if it's not your turn
-      if (ctx.currentPlayer !== playerID) {
-        return;
-      }
-
+    flipCard({ G, ctx, events }, cardIndex) {
       // Can't flip if already 2 cards are flipped
       if (G.flipped.length >= 2) {
         return;
@@ -78,24 +73,25 @@ const MemoryGame = {
           cards[first] = { ...cards[first], matched: true };
           cards[second] = { ...cards[second], matched: true };
 
-          // Update score
+          // Update score for the current player
           const scores = { ...G.scores };
-          scores[playerID] = (scores[playerID] || 0) + 1;
+          scores[ctx.currentPlayer] = (scores[ctx.currentPlayer] || 0) + 1;
 
-          return {
-            ...G,
-            cards,
-            flipped: [],
-            scores,
-          };
+          // Player gets another turn for finding a match
+          events.endTurn({ next: ctx.currentPlayer });
+
+          return { ...G, cards, flipped: [], scores };
         }
+
+        // No match — end turn so onEnd can reset flipped cards
+        events.endTurn();
+        return { ...G, flipped };
       }
 
       return { ...G, flipped };
     },
 
-    resetFlipped({ G, ctx }) {
-      // Only allow current player to reset
+    resetFlipped({ G }) {
       if (G.flipped.length === 2) {
         return { ...G, flipped: [] };
       }
@@ -103,13 +99,12 @@ const MemoryGame = {
   },
 
   turn: {
-    minMoves: 1,
-    maxMoves: 1,
     onEnd: ({ G }) => {
-      // Auto-reset flipped cards at end of turn if they didn't match
-      if (G.flipped.length === 2) {
+      // Reset any un-matched flipped cards at the end of a turn
+      if (G.flipped.length > 0) {
         return { ...G, flipped: [] };
       }
+      return G;
     },
   },
 
