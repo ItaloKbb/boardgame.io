@@ -48,6 +48,19 @@ const stripCredentialsFromAction = (action: CredentialedActionShape.Any) => {
   return { ...action, payload };
 };
 
+/**
+ * Returns true when the value is a well-formed ChatMessage object.
+ * Exported so that it can be unit-tested independently and reused by
+ * transport layers that need to validate incoming messages.
+ */
+export const isChatMessageValid = (
+  chatMessage: unknown
+): chatMessage is ChatMessage =>
+  typeof chatMessage === 'object' &&
+  chatMessage !== null &&
+  typeof (chatMessage as ChatMessage).id === 'string' &&
+  typeof (chatMessage as ChatMessage).sender === 'string';
+
 type CallbackFn = (arg: {
   state: State;
   matchID: string;
@@ -464,6 +477,11 @@ export class Master {
   ): Promise<void | { error: string }> {
     const key = matchID;
 
+    // Validate chat message structure regardless of authentication configuration.
+    if (!isChatMessageValid(chatMessage)) {
+      return { error: 'invalid message' };
+    }
+
     if (this.auth) {
       const { metadata } = await (this.storageAPI as StorageAPI.Async).fetch(
         key,
@@ -471,9 +489,6 @@ export class Master {
           metadata: true,
         }
       );
-      if (!(chatMessage && typeof chatMessage.sender === 'string')) {
-        return { error: 'unauthorized' };
-      }
       const isAuthentic = await this.auth.authenticateCredentials({
         playerID: chatMessage.sender,
         credentials,
@@ -488,5 +503,24 @@ export class Master {
       type: 'chat',
       args: [matchID, chatMessage],
     });
+
+    // Persist the message so players can retrieve history on reconnect.
+    if (StorageAPI.isSynchronous(this.storageAPI)) {
+      this.storageAPI.setChatMessage?.(key, chatMessage);
+    } else {
+      await this.storageAPI.setChatMessage?.(key, chatMessage);
+    }
+  }
+
+  /**
+   * Called when a client requests the full chat history for a match.
+   * Returns the ordered list of all chat messages sent in the match.
+   */
+  async onGetChatHistory(matchID: string): Promise<ChatMessage[]> {
+    const key = matchID;
+    if (StorageAPI.isSynchronous(this.storageAPI)) {
+      return this.storageAPI.getChatHistory?.(key) ?? [];
+    }
+    return (await this.storageAPI.getChatHistory?.(key)) ?? [];
   }
 }

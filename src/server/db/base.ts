@@ -1,5 +1,5 @@
 import type { Object } from 'ts-toolbelt';
-import type { State, Server, LogEntry } from '../../types';
+import type { State, Server, LogEntry, ChatMessage } from '../../types';
 
 export enum Type {
   SYNC = 0,
@@ -191,6 +191,16 @@ export abstract class Async {
    * @deprecated Use listMatches instead, if implemented
    */
   async listGames?(opts?: ListGamesOpts): Promise<string[]>;
+
+  /**
+   * Persist a chat message for a match.
+   */
+  async setChatMessage?(matchID: string, chatMessage: ChatMessage): Promise<void>;
+
+  /**
+   * Retrieve the full chat history for a match.
+   */
+  async getChatHistory?(matchID: string): Promise<ChatMessage[]>;
 }
 
 export abstract class Sync {
@@ -293,4 +303,14 @@ export abstract class Sync {
    * @deprecated Use listMatches instead, if implemented
    */
   listGames?(opts?: ListGamesOpts): string[];
+
+  /**
+   * Persist a chat message for a match.
+   */
+  setChatMessage?(matchID: string, chatMessage: ChatMessage): void;
+
+  /**
+   * Retrieve the full chat history for a match.
+   */
+  getChatHistory?(matchID: string): ChatMessage[];
 }

@@ -1,4 +1,4 @@
-import type { State, Server, LogEntry } from '../../types';
+import type { State, Server, LogEntry, ChatMessage } from '../../types';
 import * as StorageAPI from './base';
 
 /*
@@ -17,6 +17,7 @@ export class InMemory extends StorageAPI.Sync {
   protected initial: Map<string, State>;
   protected metadata: Map<string, Server.MatchData>;
   protected log: Map<string, LogEntry[]>;
+  protected chatMessages: Map<string, ChatMessage[]>;
 
   /**
    * Creates a new InMemory storage.
@@ -27,6 +28,7 @@ export class InMemory extends StorageAPI.Sync {
     this.initial = new Map();
     this.metadata = new Map();
     this.log = new Map();
+    this.chatMessages = new Map();
   }
 
   /**
@@ -139,5 +141,24 @@ export class InMemory extends StorageAPI.Sync {
         return true;
       })
       .map(([key]) => key);
+  }
+
+  /**
+   * Append a chat message to the history for a match.
+   */
+  setChatMessage(matchID: string, chatMessage: ChatMessage): void {
+    const history = this.chatMessages.get(matchID);
+    if (history) {
+      history.push(chatMessage);
+    } else {
+      this.chatMessages.set(matchID, [chatMessage]);
+    }
+  }
+
+  /**
+   * Return the full chat history for a match.
+   */
+  getChatHistory(matchID: string): ChatMessage[] {
+    return this.chatMessages.get(matchID) || [];
   }
 }

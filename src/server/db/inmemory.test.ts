@@ -140,4 +140,27 @@ describe('InMemory', () => {
     // Shall not return error
     db.wipe('matchID');
   });
+
+  describe('chat history', () => {
+    test('returns empty array when no messages have been sent', () => {
+      expect(db.getChatHistory('noChatMatch')).toEqual([]);
+    });
+
+    test('persists and retrieves chat messages in order', () => {
+      const msg1 = { id: 'c1', sender: '0', payload: 'hi' };
+      const msg2 = { id: 'c2', sender: '1', payload: 'hello' };
+      db.setChatMessage('chatMatch', msg1);
+      db.setChatMessage('chatMatch', msg2);
+      expect(db.getChatHistory('chatMatch')).toEqual([msg1, msg2]);
+    });
+
+    test('isolates chat history per match', () => {
+      const msgA = { id: 'a1', sender: '0', payload: 'msgA' };
+      const msgB = { id: 'b1', sender: '1', payload: 'msgB' };
+      db.setChatMessage('matchA', msgA);
+      db.setChatMessage('matchB', msgB);
+      expect(db.getChatHistory('matchA')).toEqual([msgA]);
+      expect(db.getChatHistory('matchB')).toEqual([msgB]);
+    });
+  });
 });

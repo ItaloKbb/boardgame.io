@@ -40,5 +40,6 @@ export class LocalStorage extends InMemory {
     this.initial = StorageMap('initial');
     this.metadata = StorageMap('metadata');
     this.log = StorageMap('log');
+    this.chatMessages = StorageMap('chatMessages');
   }
 }

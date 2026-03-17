@@ -9,7 +9,7 @@
 import * as ActionCreators from '../core/action-creators';
 import { InitializeGame } from '../core/initialize';
 import { InMemory } from '../server/db/inmemory';
-import { Master } from './master';
+import { Master, isChatMessageValid } from './master';
 import { error } from '../core/logger';
 import type { Game, Server, State, LogEntry } from '../types';
 import { Auth } from '../server/auth';
@@ -1023,7 +1023,33 @@ describe('authentication', () => {
         new Auth({ authenticateCredentials })
       );
       const ret = await master.onChatMessage(matchID, undefined, undefined);
-      expect(ret && ret.error).toBe('unauthorized');
+      expect(ret && ret.error).toBe('invalid message');
+      expect(sendAll).not.toHaveBeenCalled();
+    });
+
+    test('invalid packet missing id field', async () => {
+      const authenticateCredentials = () => true;
+      const master = new Master(
+        game,
+        storage,
+        TransportAPI(send, sendAll),
+        new Auth({ authenticateCredentials })
+      );
+      // A message without an `id` field must be rejected even when auth succeeds.
+      const ret = await master.onChatMessage(
+        matchID,
+        { sender: '0', payload: 'hello' } as any,
+        undefined
+      );
+      expect(ret && ret.error).toBe('invalid message');
+      expect(sendAll).not.toHaveBeenCalled();
+    });
+
+    test('invalid packet without auth', async () => {
+      // When no Auth instance is provided, malformed messages must still be rejected.
+      const master = new Master(game, storage, TransportAPI(send, sendAll));
+      const ret = await master.onChatMessage(matchID, undefined, undefined);
+      expect(ret && ret.error).toBe('invalid message');
       expect(sendAll).not.toHaveBeenCalled();
     });
 
@@ -1038,6 +1064,42 @@ describe('authentication', () => {
       expect(ret).toBeUndefined();
       expect(sendAll).toHaveBeenCalled();
     });
+  });
+});
+
+describe('isChatMessageValid', () => {
+  test('returns true for a well-formed message', () => {
+    expect(
+      isChatMessageValid({ id: 'abc', sender: '0', payload: 'hi' })
+    ).toBe(true);
+  });
+
+  test('returns false for undefined', () => {
+    expect(isChatMessageValid(undefined)).toBe(false);
+  });
+
+  test('returns false for null', () => {
+    expect(isChatMessageValid(null)).toBe(false);
+  });
+
+  test('returns false when id is missing', () => {
+    expect(isChatMessageValid({ sender: '0', payload: 'hi' })).toBe(false);
+  });
+
+  test('returns false when sender is missing', () => {
+    expect(isChatMessageValid({ id: 'abc', payload: 'hi' })).toBe(false);
+  });
+
+  test('returns false when id is not a string', () => {
+    expect(isChatMessageValid({ id: 42, sender: '0', payload: 'hi' })).toBe(
+      false
+    );
+  });
+
+  test('returns false when sender is not a string', () => {
+    expect(
+      isChatMessageValid({ id: 'abc', sender: 99, payload: 'hi' })
+    ).toBe(false);
   });
 });
 
@@ -1064,5 +1126,19 @@ describe('chat', () => {
         { id: 'uuid', sender: '0', payload: { message: 'foo' } },
       ],
     });
+  });
+
+  test('persists message and retrieves chat history', async () => {
+    const msg1 = { id: 'msg1', sender: '0', payload: 'hello' };
+    const msg2 = { id: 'msg2', sender: '1', payload: 'world' };
+    await master.onChatMessage('historyMatch', msg1, undefined);
+    await master.onChatMessage('historyMatch', msg2, undefined);
+    const history = await master.onGetChatHistory('historyMatch');
+    expect(history).toEqual([msg1, msg2]);
+  });
+
+  test('returns empty array for a match with no chat history', async () => {
+    const history = await master.onGetChatHistory('emptyMatch');
+    expect(history).toEqual([]);
   });
 });
