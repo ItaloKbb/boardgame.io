@@ -15,8 +15,13 @@ import lobby from './lobby';
 import simulator from './simulator';
 import redacted_move from './redacted-move';
 import undo from './undo';
+import memory_game from './memory-game';
 
 const routes = [
+  {
+    name: 'Memory Game',
+    routes: memory_game.routes,
+  },
   {
     name: 'Tic-Tac-Toe',
     routes: tic_tac_toe.routes,
