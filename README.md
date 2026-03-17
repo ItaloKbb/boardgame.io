@@ -25,10 +25,6 @@ into a playable game complete with online multiplayer
 features, all without requiring you to write a single line of
 networking or storage code.
 
-### 🎮 Try It Out!
-
-Play our [Memory Game demo](https://italokbb.github.io/boardgame.io/memory-game.html) - a fun card-matching game built with boardgame.io!
-
 ### Features
 
 - **State Management**: Game state is managed seamlessly across clients, server and storage automatically.
